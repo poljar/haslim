@@ -52,14 +52,22 @@ compileNode node indent = do
   let as = attributes $ tag node
   let indentation = replicate indent ' '
 
-  putStrLn $ indentation ++ "<" ++ t ++ " " ++ strip (compileAttrs as) ++ ">"
+  if contentTag $ tag node
+    then do
+      compileContent (tag node) indent
+      compileNodes (children node) indent
+    else do
+      putStrLn $ indentation ++ "<" ++ t ++ compileAttrs as ++ ">"
+      compileContent (tag node) (indent + 4)
+      compileNodes (children node) (indent + 4)
+      putStrLn $ indentation ++ "</" ++ t ++ ">"
 
-  case (content $ tag node) of
-    Just s  -> putStrLn $ indentation ++ "    " ++ s
+compileContent :: Tag -> Int -> IO ()
+compileContent tag indent = do
+  let indentation = replicate (indent + 0) ' '
+  case (content tag) of
+    Just s  -> putStrLn $ indentation ++ s
     Nothing -> return ()
-
-  compileNodes (children node) (indent + 4)
-  putStrLn $ indentation ++ "</" ++ t ++ ">"
 
 tagName :: Tag -> String
 tagName tag = do
@@ -70,7 +78,7 @@ tagName tag = do
 compileAttrs :: [Attribute] -> String
 compileAttrs [] = ""
 compileAttrs (x:xs) = do
-  strip $ compileAttr x ++ " " ++ (compileAttrs xs)
+  " " ++ (strip $ compileAttr x ++ " " ++ (compileAttrs xs))
 
 compileAttr :: Attribute -> String
 compileAttr a = do
@@ -143,6 +151,10 @@ emptyNode node = do
 emptyTag :: Tag -> Bool
 emptyTag tag = do
   (attributes tag) == [] && (name tag) == Nothing && (content tag == Nothing)
+
+contentTag :: Tag -> Bool
+contentTag tag = do
+  (attributes tag) == [] && (name tag) == Nothing
 
 parseNode :: Parser Node
 parseNode = do
